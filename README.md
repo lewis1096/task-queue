@@ -2,6 +2,18 @@
 
 Async task queue library backed by Postgres. Provides durable job queuing with at-least-once delivery, automatic retries with exponential backoff, dead-letter handling, and lease-based failure detection. Designed to run in Kubernetes with zero infrastructure beyond the database.
 
+## Architecture
+
+Everything runs locally inside a minikube cluster on Docker Desktop. You interact via `kubectl` from your terminal.
+
+![Local development architecture](docs/architecture.svg)
+
+- **Postgres** — single pod, stores all job state
+- **Producer** — enqueues fake jobs in a loop
+- **Workers (x3)** — compete for jobs via `SELECT ... FOR UPDATE SKIP LOCKED`
+- **Lease reaper** — CronJob that reclaims stuck jobs every 30s
+- **TTL cleanup** — CronJob that deletes old completed/dead-lettered jobs daily
+
 ## Prerequisites
 
 - Python 3.11+
