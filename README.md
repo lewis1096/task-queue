@@ -14,6 +14,10 @@ Everything runs locally inside a minikube cluster on Docker Desktop. You interac
 - **Lease reaper** — CronJob that reclaims stuck jobs every 30s
 - **TTL cleanup** — CronJob that deletes old completed/dead-lettered jobs daily
 
+In production, the same architecture runs on a real Kubernetes cluster in the cloud. Your Mac pushes images to a container registry and applies manifests via `kubectl`.
+
+![Cloud architecture](docs/cloud-architecture.svg)
+
 ## Prerequisites
 
 - Python 3.11+
