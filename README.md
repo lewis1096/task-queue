@@ -71,10 +71,10 @@ kubectl get pods -l app=postgres -w
 kubectl run pg-test --rm -it --restart=Never \
   --image=postgres:16 \
   --env="PGPASSWORD=taskqueue-dev-password" \
-  -- psql -h postgres -U taskqueue -d taskqueue -c "SELECT 1;"
+  -- psql -h postgres -U taskqueue -d taskqueue --pset pager=off -c "SELECT 1;"
 ```
 
-You should see a result of `1`. Press `q` to exit the pager, and the test pod cleans itself up.
+You should see a result of `1`, then the test pod cleans itself up.
 
 ### Stopping and restarting
 
