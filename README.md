@@ -76,6 +76,22 @@ kubectl run pg-test --rm -it --restart=Never \
 
 You should see a result of `1`, then the test pod cleans itself up.
 
+### Build and deploy the task queue
+
+```bash
+# Point docker CLI at minikube's daemon
+eval $(minikube docker-env)
+
+# Build the image
+docker build -t taskqueue:latest .
+
+# Run the database migration
+kubectl delete job taskqueue-migrate --ignore-not-found
+kubectl apply -f k8s/migrate-job.yaml
+kubectl wait --for=condition=complete job/taskqueue-migrate --timeout=60s
+kubectl logs job/taskqueue-migrate
+```
+
 ### Stopping and restarting
 
 - `minikube stop` — pauses everything, data is preserved
@@ -95,14 +111,18 @@ src/taskqueue/       # Library source code
   __init__.py
   models.py          # Job dataclass
   db.py              # Database connection
+  migrate.py         # Runs SQL migrations
 tests/               # Test suite
+migrations/          # SQL migration files
+  001_create_jobs.sql
 k8s/                 # Kubernetes manifests
   postgres-secret.yaml
   postgres-pvc.yaml
   postgres-deployment.yaml
   postgres-service.yaml
+  migrate-job.yaml   # One-shot Job to run migrations
 Dockerfile           # Single image, multiple roles via ROLE env var
-entrypoint.sh        # Dispatches to producer/worker/reaper/cleanup
+entrypoint.sh        # Dispatches to producer/worker/reaper/cleanup/migrate
 pyproject.toml       # Package metadata and dependencies
 ```
 

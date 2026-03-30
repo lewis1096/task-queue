@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY pyproject.toml .
 COPY src/ src/
+COPY migrations/ migrations/
 
 RUN pip install --no-cache-dir .
 

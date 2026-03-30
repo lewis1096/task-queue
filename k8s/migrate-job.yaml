@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: taskqueue-migrate
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: taskqueue-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: taskqueue:latest
+          imagePullPolicy: Never
+          env:
+            - name: ROLE
+              value: migrate
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
