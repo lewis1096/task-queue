@@ -5,13 +5,14 @@ Usage:
     python -m taskqueue.migrate  (directly)
 """
 
+import os
 import pathlib
 
 from taskqueue.db import get_connection
 
 
 def run_migrations() -> None:
-    migration_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "migrations"
+    migration_dir = pathlib.Path(os.environ.get("MIGRATIONS_DIR", "migrations"))
     migration_files = sorted(migration_dir.glob("*.sql"))
 
     if not migration_files:
