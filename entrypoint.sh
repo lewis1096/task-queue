@@ -6,5 +6,6 @@ case "$ROLE" in
     worker)    exec python -m taskqueue.worker ;;
     reaper)    exec python -m taskqueue.reaper ;;
     cleanup)   exec python -m taskqueue.cleanup ;;
+    migrate)   exec python -m taskqueue.migrate ;;
     *)         echo "Unknown ROLE: $ROLE" && exit 1 ;;
 esac
