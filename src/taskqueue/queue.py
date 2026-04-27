@@ -7,7 +7,7 @@ import psycopg
 from psycopg import errors as pg_errors
 from psycopg.rows import dict_row
 
-from taskqueue.models import Job
+from taskqueue.models import Job, JobStatus
 
 NOTIFY_CHANNEL = "jobs_new"
 
@@ -72,7 +72,7 @@ def dequeue(
             """
             WITH claimed AS (
                 SELECT id FROM jobs
-                WHERE status = 'queued'
+                WHERE status = %(queued)s
                   AND (retry_after IS NULL OR retry_after <= now())
                   AND (%(job_types)s::text[] IS NULL
                        OR job_type = ANY(%(job_types)s::text[]))
@@ -81,7 +81,7 @@ def dequeue(
                 LIMIT 1
             )
             UPDATE jobs j
-            SET status = 'running',
+            SET status = %(running)s,
                 worker_id = %(worker_id)s,
                 lease_expires_at = now() + make_interval(secs => %(lease_seconds)s),
                 started_at = now(),
@@ -94,6 +94,8 @@ def dequeue(
                 "worker_id": worker_id,
                 "lease_seconds": lease_seconds,
                 "job_types": job_types,
+                "queued": JobStatus.QUEUED,
+                "running": JobStatus.RUNNING,
             },
         )
         row = cur.fetchone()

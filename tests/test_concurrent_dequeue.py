@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import uuid
 
-from taskqueue import dequeue, enqueue
+from taskqueue import JobStatus, dequeue, enqueue
 
 
 def test_concurrent_dequeue_no_double_claim(conn, make_conn):
@@ -40,5 +40,5 @@ def test_concurrent_dequeue_no_double_claim(conn, make_conn):
     assert len(set(claims)) == n_jobs, "a job was claimed more than once"
 
     with conn.cursor() as cur:
-        cur.execute("SELECT count(*) FROM jobs WHERE status = 'running'")
+        cur.execute("SELECT count(*) FROM jobs WHERE status = %s", (JobStatus.RUNNING,))
         assert cur.fetchone()[0] == n_jobs

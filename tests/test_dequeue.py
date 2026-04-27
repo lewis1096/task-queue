@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from taskqueue import dequeue, enqueue
+from taskqueue import JobStatus, dequeue, enqueue
 
 
 def test_dequeue_empty_returns_none(conn):
@@ -17,7 +17,7 @@ def test_dequeue_returns_highest_priority(conn):
     job = dequeue(conn, worker_id="w1")
     assert job is not None
     assert job.id == high_id
-    assert job.status == "running"
+    assert job.status is JobStatus.RUNNING
     assert job.worker_id == "w1"
     assert job.attempt_count == 1
     assert job.lease_expires_at is not None

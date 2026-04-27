@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-from taskqueue import NOTIFY_CHANNEL, DuplicateJobError, enqueue
+from taskqueue import NOTIFY_CHANNEL, DuplicateJobError, JobStatus, enqueue
 
 
 def test_enqueue_returns_uuid_and_inserts_row(conn):
@@ -20,7 +20,7 @@ def test_enqueue_returns_uuid_and_inserts_row(conn):
         cur.execute("SELECT id, status, priority, payload FROM jobs WHERE id = %s", (job_id,))
         row = cur.fetchone()
     assert row is not None
-    assert row[1] == "queued"
+    assert row[1] == JobStatus.QUEUED
     assert row[2] == 5
     assert row[3] == {"to": "a@b.com"}
 
