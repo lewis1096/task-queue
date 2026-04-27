@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from taskqueue import dequeue, enqueue
 
 
@@ -48,3 +50,46 @@ def test_dequeue_returns_none_when_only_future_jobs(conn):
         cur.execute("UPDATE jobs SET retry_after = now() + interval '1 hour'")
     conn.commit()
     assert dequeue(conn, worker_id="w1") is None
+
+
+def test_dequeue_filters_by_single_job_type(conn):
+    email_id = enqueue(conn, idempotency_key="e1", job_type="email", payload={})
+    enqueue(conn, idempotency_key="s1", job_type="slack", payload={})
+
+    job = dequeue(conn, worker_id="w1", job_types=["email"])
+    assert job is not None and job.id == email_id and job.job_type == "email"
+
+
+def test_dequeue_filters_by_multiple_job_types(conn):
+    enqueue(conn, idempotency_key="w1", job_type="webhook", payload={})
+    enqueue(conn, idempotency_key="e1", job_type="email", payload={})
+    enqueue(conn, idempotency_key="s1", job_type="slack", payload={})
+
+    claimed_types: set[str] = set()
+    for _ in range(2):
+        job = dequeue(conn, worker_id="w1", job_types=["email", "slack"])
+        assert job is not None
+        claimed_types.add(job.job_type)
+    assert claimed_types == {"email", "slack"}
+
+    # The webhook job was never eligible.
+    assert dequeue(conn, worker_id="w1", job_types=["email", "slack"]) is None
+
+
+def test_dequeue_returns_none_when_no_matching_type(conn):
+    enqueue(conn, idempotency_key="e1", job_type="email", payload={})
+    assert dequeue(conn, worker_id="w1", job_types=["webhook"]) is None
+
+
+def test_dequeue_priority_respects_job_type_filter(conn):
+    # Higher-priority webhook should be skipped when worker only handles email.
+    enqueue(conn, idempotency_key="w1", job_type="webhook", payload={}, priority=100)
+    email_id = enqueue(conn, idempotency_key="e1", job_type="email", payload={}, priority=1)
+
+    job = dequeue(conn, worker_id="w1", job_types=["email"])
+    assert job is not None and job.id == email_id
+
+
+def test_dequeue_empty_job_types_raises(conn):
+    with pytest.raises(ValueError):
+        dequeue(conn, worker_id="w1", job_types=[])

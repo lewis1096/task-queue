@@ -55,9 +55,18 @@ def dequeue(
     conn: psycopg.Connection,
     *,
     worker_id: str,
+    job_types: list[str] | None = None,
     lease_seconds: int = 60,
 ) -> Job | None:
-    """Atomically claim the highest-priority eligible job. Commits on success."""
+    """Atomically claim the highest-priority eligible job. Commits on success.
+
+    If ``job_types`` is given, only jobs whose ``job_type`` is in the list are
+    eligible. ``None`` means any type. An empty list raises ``ValueError`` —
+    almost always an upstream bug rather than an intentional "match nothing".
+    """
+    if job_types is not None and len(job_types) == 0:
+        raise ValueError("job_types must be None or a non-empty list")
+
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
             """
@@ -65,21 +74,27 @@ def dequeue(
                 SELECT id FROM jobs
                 WHERE status = 'queued'
                   AND (retry_after IS NULL OR retry_after <= now())
+                  AND (%(job_types)s::text[] IS NULL
+                       OR job_type = ANY(%(job_types)s::text[]))
                 ORDER BY priority DESC, created_at ASC
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
             )
             UPDATE jobs j
             SET status = 'running',
-                worker_id = %s,
-                lease_expires_at = now() + make_interval(secs => %s),
+                worker_id = %(worker_id)s,
+                lease_expires_at = now() + make_interval(secs => %(lease_seconds)s),
                 started_at = now(),
                 attempt_count = attempt_count + 1
             FROM claimed
             WHERE j.id = claimed.id
             RETURNING j.*
             """,
-            (worker_id, lease_seconds),
+            {
+                "worker_id": worker_id,
+                "lease_seconds": lease_seconds,
+                "job_types": job_types,
+            },
         )
         row = cur.fetchone()
     conn.commit()
