@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Run the test suite against the minikube Postgres.
+#
+# Handles the port-forward and TEST_DATABASE_URL setup so you can just run:
+#   ./bin/test
+#   ./bin/test -v
+#   ./bin/test tests/test_dequeue.py::test_dequeue_returns_highest_priority
+
+set -euo pipefail
+
+if ! kubectl get svc postgres >/dev/null 2>&1; then
+    echo "error: 'postgres' service not found in current kubectl context" >&2
+    echo "is minikube running and are the manifests applied? (kubectl apply -f k8s/)" >&2
+    exit 1
+fi
+
+if lsof -nP -iTCP:5432 -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "error: something is already listening on localhost:5432" >&2
+    echo "stop the existing port-forward (or other Postgres) and re-run" >&2
+    exit 1
+fi
+
+kubectl port-forward svc/postgres 5432:5432 >/dev/null 2>&1 &
+PF_PID=$!
+trap 'kill $PF_PID 2>/dev/null || true; wait $PF_PID 2>/dev/null || true' EXIT
+
+# Wait up to ~5s for the forward to be ready.
+for _ in $(seq 1 20); do
+    if nc -z localhost 5432 2>/dev/null; then
+        break
+    fi
+    sleep 0.25
+done
+
+if ! nc -z localhost 5432 2>/dev/null; then
+    echo "error: port-forward did not come up within 5s" >&2
+    exit 1
+fi
+
+export TEST_DATABASE_URL="${TEST_DATABASE_URL:-postgres://taskqueue:taskqueue-dev-password@localhost:5432/taskqueue_test}"
+
+pytest "$@"

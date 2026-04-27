@@ -100,9 +100,30 @@ kubectl logs job/taskqueue-migrate
 
 ## Run tests
 
+Tests hit a real Postgres — they cover the `UNIQUE` constraint and
+`SELECT ... FOR UPDATE SKIP LOCKED` semantics that mocks can't simulate.
+
+One-time setup (creates a separate test DB on the minikube Postgres):
+
 ```bash
-pytest
+kubectl exec deploy/postgres -- psql -U taskqueue -d postgres -c "CREATE DATABASE taskqueue_test;"
 ```
+
+Then run the suite via the wrapper script:
+
+```bash
+./bin/test           # all tests
+./bin/test -v        # verbose
+./bin/test tests/test_dequeue.py    # one file
+```
+
+The script handles the `kubectl port-forward` and `TEST_DATABASE_URL`
+export, then cleans up on exit.
+
+If you'd rather run pytest directly: forward the service in a separate
+terminal (`kubectl port-forward svc/postgres 5432:5432`), export
+`TEST_DATABASE_URL=postgres://taskqueue:taskqueue-dev-password@localhost:5432/taskqueue_test`,
+then `pytest`. Tests are skipped if `TEST_DATABASE_URL` is unset.
 
 ## Project structure
 

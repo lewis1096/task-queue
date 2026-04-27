@@ -3,7 +3,16 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from typing import Any
+
+
+class JobStatus(StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    DEAD_LETTER = "dead_letter"
 
 
 @dataclass
@@ -13,7 +22,7 @@ class Job:
     job_type: str
     payload: dict[str, Any]
     priority: int = 0
-    status: str = "queued"
+    status: JobStatus = JobStatus.QUEUED
     attempt_count: int = 0
     max_attempts: int = 3
     worker_id: str | None = None
@@ -24,3 +33,7 @@ class Job:
     completed_at: datetime | None = None
     result_payload: dict[str, Any] | None = None
     error_message: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.status, JobStatus):
+            self.status = JobStatus(self.status)
