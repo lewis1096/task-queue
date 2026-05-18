@@ -92,6 +92,33 @@ kubectl wait --for=condition=complete job/taskqueue-migrate --timeout=60s
 kubectl logs job/taskqueue-migrate
 ```
 
+### Deploy the lease reaper
+
+The reaper runs as a Kubernetes CronJob — once a minute it scans for jobs
+whose worker lease has expired (i.e., the worker crashed mid-job) and resets
+them back to `queued` so another worker can pick them up.
+
+```bash
+kubectl apply -f k8s/reaper-cronjob.yaml
+```
+
+Verify it works without waiting for the next scheduled tick:
+
+```bash
+# Trigger an immediate run from the CronJob template
+kubectl create job --from=cronjob/taskqueue-reaper reaper-test
+kubectl wait --for=condition=complete job/reaper-test --timeout=60s
+kubectl logs job/reaper-test
+# expected: "reaper: reclaimed N expired leases"
+
+# Clean up the one-off job
+kubectl delete job reaper-test
+```
+
+Kubernetes CronJob's minimum granularity is one minute, so a stuck job waits
+at most ~1 minute past lease expiry before reclamation. `concurrencyPolicy:
+Forbid` prevents overlapping runs if a tick is slow.
+
 ### Stopping and restarting
 
 - `minikube stop` — pauses everything, data is preserved

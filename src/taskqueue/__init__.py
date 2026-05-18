@@ -10,7 +10,11 @@ from taskqueue.queue import (
     enqueue,
     nack,
 )
-from taskqueue.reaper import reclaim_expired_leases
+
+# Note: taskqueue.reaper is intentionally NOT re-exported here. It's a script
+# entry point, not part of the library surface — re-exporting it would cause
+# `python -m taskqueue.reaper` to warn that the module is already loaded.
+# Callers who need the function should `from taskqueue.reaper import ...`.
 
 __version__ = "0.1.0"
 
@@ -26,6 +30,5 @@ __all__ = [
     "dequeue",
     "enqueue",
     "nack",
-    "reclaim_expired_leases",
     "__version__",
 ]
