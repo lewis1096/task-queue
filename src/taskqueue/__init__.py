@@ -1,6 +1,6 @@
 from taskqueue.models import Job, JobStatus
 from taskqueue.queue import (
-    NOTIFY_CHANNEL,
+    NOTIFY_NEW_CHANNEL,
     NOTIFY_DONE_CHANNEL,
     DuplicateJobError,
     JobNotRunningError,
@@ -15,7 +15,7 @@ from taskqueue.reaper import reclaim_expired_leases
 __version__ = "0.1.0"
 
 __all__ = [
-    "NOTIFY_CHANNEL",
+    "NOTIFY_NEW_CHANNEL",
     "NOTIFY_DONE_CHANNEL",
     "DuplicateJobError",
     "Job",

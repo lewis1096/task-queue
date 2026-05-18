@@ -12,7 +12,7 @@ from psycopg.rows import dict_row
 
 from taskqueue.models import Job, JobStatus
 
-NOTIFY_CHANNEL = "jobs_new"
+NOTIFY_NEW_CHANNEL = "jobs_new"
 NOTIFY_DONE_CHANNEL = "jobs_done"
 
 BACKOFF_BASE_SECONDS = 10
@@ -64,7 +64,7 @@ def enqueue(
             row = cur.fetchone()
             assert row is not None
             job_id: uuid.UUID = row[0]
-            cur.execute("SELECT pg_notify(%s, %s)", (NOTIFY_CHANNEL, str(job_id)))
+            cur.execute("SELECT pg_notify(%s, %s)", (NOTIFY_NEW_CHANNEL, str(job_id)))
         conn.commit()
         return job_id
     except pg_errors.UniqueViolation as exc:
